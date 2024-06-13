@@ -1,0 +1,697 @@
+library(dplyr)
+library(Seurat) 
+library(patchwork)
+library(ggplot2)
+library(readr)
+library(harmony)
+library(Matrix)
+
+
+## set working directory to where you have CITEseq files saved
+
+setwd("/Users/sarahcolpitts/Desktop/CITEseq-CANASK")
+
+## LOAD SPLEEN DATA
+
+matrix_dir = "R405_spleen/outs/filtered_feature_bc_matrix/"
+barcode.path <- paste0(matrix_dir, "barcodes.tsv.gz")
+features.path <- paste0(matrix_dir, "features.tsv.gz")
+matrix.path <- paste0(matrix_dir, "matrix.mtx.gz")
+mat <- readMM(file = matrix.path)
+feature.names = read.delim(features.path, header = FALSE, stringsAsFactors = FALSE)
+barcode.names = read.delim(barcode.path, header = FALSE, stringsAsFactors = FALSE)
+colnames (mat) = barcode.names$V1
+rownames (mat) = feature.names$V2
+spleen  <- CreateSeuratObject(mat)
+rm(mat)
+
+save(spleen, file = "spleen.rds")
+
+# load in spleen data
+
+load(file= "spleen.rds")
+
+## LOAD ISLET-TOTAL DATA
+matrix_dir = "R405_pancreas_CD45/outs/filtered_feature_bc_matrix/"
+barcode.path <- paste0(matrix_dir, "barcodes.tsv.gz")
+features.path <- paste0(matrix_dir, "features.tsv.gz")
+matrix.path <- paste0(matrix_dir, "matrix.mtx.gz")
+mat <- readMM(file = matrix.path)
+feature.names = read.delim(features.path, header = FALSE, stringsAsFactors = FALSE)
+barcode.names = read.delim(barcode.path, header = FALSE, stringsAsFactors = FALSE)
+colnames (mat) = barcode.names$V1
+rownames (mat) = feature.names$V2
+islets.total  <- CreateSeuratObject(mat)
+rm(mat)
+
+save(islets.total, file = "islets.total.rds")
+
+# load in total islet data
+
+load(file= "islets.total.rds")
+
+## LOAD SORTED ISLET DATA
+
+matrix_dir = "R405_pancreas_sort/outs/filtered_feature_bc_matrix/"
+barcode.path <- paste0(matrix_dir, "barcodes.tsv.gz")
+features.path <- paste0(matrix_dir, "features.tsv.gz")
+matrix.path <- paste0(matrix_dir, "matrix.mtx.gz")
+mat <- readMM(file = matrix.path)
+feature.names = read.delim(features.path, header = FALSE, stringsAsFactors = FALSE)
+barcode.names = read.delim(barcode.path, header = FALSE, stringsAsFactors = FALSE)
+colnames (mat) = barcode.names$V1
+rownames (mat) = feature.names$V2
+islets.sorted  <- CreateSeuratObject(mat)
+rm(mat)
+
+save(islets.sorted, file = "islets.sorted.rds")
+
+# load in sorted islet data
+
+load(file= "islets.sorted.rds")
+
+
+# Label your objects with data info needed for downstream analysis
+
+spleen$dataorigin <- "spleen"
+islets.total$dataorigin <- "islet"
+islets.sorted$dataorigin <- "islet"
+
+spleen$donor <- "R405"
+islets.total$donor <- "R405"
+islets.sorted$donor <- "R405"
+
+spleen$sex <- "male"
+islets.total$sex <- "male"
+islets.sorted$sex <- "male"
+
+
+
+# QC mitchondrial cutoffs and features spleen 
+spleen[["percent.mt"]] <- PercentageFeatureSet(spleen, pattern = "^MT-")
+VlnPlot(spleen, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+
+#view row and cell number
+dim(spleen)
+
+
+spleen <- subset(spleen, subset = nFeature_RNA > 200 & percent.mt < 10)
+
+dim(spleen)
+
+
+## normalize spleen with SCtransform
+
+spleen <- SCTransform(spleen, vars.to.regress="percent.mt")
+spleen <- RunPCA(spleen)
+spleen <- RunUMAP(spleen, dims = 1:30)
+spleen <- FindNeighbors(spleen, dims = 1:30)
+spleen <- FindClusters(spleen, resolution = 0.5)
+DimPlot(spleen, reduction = "umap", label=TRUE, repel=TRUE)
+
+
+# find markers which define clusters
+spleen.cluster.0.markers <- FindMarkers(spleen, ident.1 = 0, min.pct = 0.25)
+spleen.cluster.1.markers <- FindMarkers(spleen, ident.1 = 1, min.pct = 0.25)
+spleen.cluster.2.markers <- FindMarkers(spleen, ident.1 = 2, min.pct = 0.25)
+spleen.cluster.3.markers <- FindMarkers(spleen, ident.1 = 3, min.pct = 0.25)
+spleen.cluster.4.markers <- FindMarkers(spleen, ident.1 = 4, min.pct = 0.25)
+spleen.cluster.5.markers <- FindMarkers(spleen, ident.1 = 5, min.pct = 0.25)
+spleen.cluster.6.markers <- FindMarkers(spleen, ident.1 = 6, min.pct = 0.25)
+spleen.cluster.7.markers <- FindMarkers(spleen, ident.1 = 7, min.pct = 0.25)
+spleen.cluster.8.markers <- FindMarkers(spleen, ident.1 = 8, min.pct = 0.25)
+spleen.cluster.9.markers <- FindMarkers(spleen, ident.1 = 9, min.pct = 0.25)
+spleen.cluster.10.markers <- FindMarkers(spleen, ident.1 = 10, min.pct = 0.25)
+spleen.cluster.11.markers <- FindMarkers(spleen, ident.1 = 11, min.pct = 0.25)
+spleen.cluster.12.markers <- FindMarkers(spleen, ident.1 = 12, min.pct = 0.25)
+spleen.cluster.13.markers <- FindMarkers(spleen, ident.1 = 13, min.pct = 0.25)
+spleen.cluster.14.markers <- FindMarkers(spleen, ident.1 = 14, min.pct = 0.25)
+spleen.cluster.15.markers <- FindMarkers(spleen, ident.1 = 15, min.pct = 0.25)
+
+#0- Bcell, 1- myleoid, 2-B cell, 3-CD8, 4- antibody aggregate, 5-CD4, 6-aggregate, 7-myeloid, 8-CD8, 9-CD8, 10-plasma cells,
+#11-NK cell, 12-T cell, 13-ILC, 14-Myeloid 15-doublet/aggregate
+
+#view QC again
+spleen[["percent.mt"]] <- PercentageFeatureSet(spleen, pattern = "^MT-")
+VlnPlot(spleen, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+
+dim(spleen)
+
+# set more stringent cutoffs 
+spleen <- subset(spleen, subset = nFeature_RNA > 200 & percent.mt < 6 & nFeature_RNA <25000)
+dim(spleen)
+
+
+#Subset out immune cells only and transform
+spleen.immune <- subset(spleen, subset = seurat_clusters == 0|seurat_clusters == 1|seurat_clusters == 2|seurat_clusters == 3|
+                          seurat_clusters == 5|seurat_clusters == 7|seurat_clusters == 8|seurat_clusters == 9|seurat_clusters == 10 |
+                          seurat_clusters == 11 |seurat_clusters == 12 |seurat_clusters == 13|seurat_clusters == 14)
+
+dim(spleen.immune)
+
+spleen.immune <- SCTransform(spleen.immune)
+spleen.immune <- RunPCA(spleen.immune)
+spleen.immune <- RunUMAP(spleen.immune, dims = 1:30)
+spleen.immune <- FindNeighbors(spleen.immune, dims = 1:30)
+spleen.immune <- FindClusters(spleen.immune, resolution = 0.5)
+DimPlot(spleen.immune, reduction = "umap", label=TRUE, repel=TRUE)
+
+save(spleen.immune, file = "spleen.immune.rds")
+
+
+spleen.immune.cluster.0.markers <- FindMarkers(spleen.immune, ident.1 = 0, min.pct = 0.25)
+spleen.immune.cluster.1.markers <- FindMarkers(spleen.immune, ident.1 = 1, min.pct = 0.25)
+spleen.immune.cluster.2.markers <- FindMarkers(spleen.immune, ident.1 = 2, min.pct = 0.25)
+spleen.immune.cluster.3.markers <- FindMarkers(spleen.immune, ident.1 = 3, min.pct = 0.25)
+spleen.immune.cluster.4.markers <- FindMarkers(spleen.immune, ident.1 = 4, min.pct = 0.25)
+spleen.immune.cluster.5.markers <- FindMarkers(spleen.immune, ident.1 = 5, min.pct = 0.25)
+spleen.immune.cluster.6.markers <- FindMarkers(spleen.immune, ident.1 = 6, min.pct = 0.25)
+spleen.immune.cluster.7.markers <- FindMarkers(spleen.immune, ident.1 = 7, min.pct = 0.25)
+spleen.immune.cluster.8.markers <- FindMarkers(spleen.immune, ident.1 = 8, min.pct = 0.25)
+spleen.immune.cluster.9.markers <- FindMarkers(spleen.immune, ident.1 = 9, min.pct = 0.25)
+spleen.immune.cluster.10.markers <- FindMarkers(spleen.immune, ident.1 = 10, min.pct = 0.25)
+spleen.immune.cluster.11.markers <- FindMarkers(spleen.immune, ident.1 = 11, min.pct = 0.25)
+spleen.immune.cluster.12.markers <- FindMarkers(spleen.immune, ident.1 = 12, min.pct = 0.25)
+spleen.immune.cluster.13.markers <- FindMarkers(spleen.immune, ident.1 = 13, min.pct = 0.25)
+spleen.immune.cluster.14.markers <- FindMarkers(spleen.immune, ident.1 = 14, min.pct = 0.25)
+
+#0- Bcell, 1- myleoid, 2-CD4, 3-B cell, 4-CD8, 5-Myeloid, 6-Myeloid, 7-CD8, 8-CD8, 9-NK cell, 10-CD8,
+#11-Plasma, 12-NK cell, 13-B cell, 14-ILC
+
+
+# Label clusters
+cluster_ids <- c("B cell", "Myeloid", "CD4 T cell", "B cell", "CD8 T cell", "Myeloid", "Myeloid",  "CD8 T cell",  "CD8 T cell",  "NK cell", "CD8 T cell", "Plasma B cell", "NK cell", "B cell", "ILC3")
+names(cluster_ids) <- levels(spleen.immune)
+spleen.labels <- RenameIdents(spleen.immune, cluster_ids)
+rm(cluster_ids)
+DimPlot(spleen.labels, reduction = "umap", label=TRUE, repel=TRUE)
+
+# Label cell types in the meta data
+
+#Celltype
+spleen.labels$Celltype <- "Placeholder"
+spleen.labels$Celltype <- (ifelse(spleen.labels$seurat_clusters == "0", "B cell", spleen.labels$Celltype))
+spleen.labels$Celltype <- (ifelse(spleen.labels$seurat_clusters == "1", "Myeloid", spleen.labels$Celltype))
+spleen.labels$Celltype <- (ifelse(spleen.labels$seurat_clusters == "2", "CD4 T cell", spleen.labels$Celltype))
+spleen.labels$Celltype <- (ifelse(spleen.labels$seurat_clusters == "3", "B cell", spleen.labels$Celltype))
+spleen.labels$Celltype <- (ifelse(spleen.labels$seurat_clusters == "4", "CD8 T cell", spleen.labels$Celltype))
+spleen.labels$Celltype <- (ifelse(spleen.labels$seurat_clusters == "5", "Myeloid", spleen.labels$Celltype))
+spleen.labels$Celltype <- (ifelse(spleen.labels$seurat_clusters == "6", "Myeloid", spleen.labels$Celltype))
+spleen.labels$Celltype <- (ifelse(spleen.labels$seurat_clusters == "7", "CD8 T cell", spleen.labels$Celltype))
+spleen.labels$Celltype <- (ifelse(spleen.labels$seurat_clusters == "8", "CD8 T cell", spleen.labels$Celltype))
+spleen.labels$Celltype <- (ifelse(spleen.labels$seurat_clusters == "9", "NK cell", spleen.labels$Celltype))
+spleen.labels$Celltype <- (ifelse(spleen.labels$seurat_clusters == "10", "CD8 T cell", spleen.labels$Celltype))
+spleen.labels$Celltype <- (ifelse(spleen.labels$seurat_clusters == "11", "Plasma cell", spleen.labels$Celltype))
+spleen.labels$Celltype <- (ifelse(spleen.labels$seurat_clusters == "12", "NK cell", spleen.labels$Celltype))
+spleen.labels$Celltype <- (ifelse(spleen.labels$seurat_clusters == "13", "B cell", spleen.labels$Celltype))
+spleen.labels$Celltype <- (ifelse(spleen.labels$seurat_clusters == "14", "ILC3", spleen.labels$Celltype))
+
+#data visualization
+
+DimPlot(spleen.labels, reduction = "umap", group.by="Celltype", label=TRUE, repel=TRUE)
+VlnPlot(spleen.labels,  group.by="Celltype", features="CD16-TotalSeqC")
+
+DotPlot(spleen.labels, group.by="Celltype", col.min = 0.25, dot.scale = 4, 
+        features = c("CD4", "CD4-TotalSeqC", "CD8A", "CD8a-TotalSeqC", "IL7R", "CD127-TotalSeqC")
+        , cols = c("lightgrey", "#0B0B45")) + RotatedAxis()
+
+
+ggplot
+
+
+save(spleen.labels, file = "spleen.immune.labels.rds")
+
+## QC islet total
+
+islets.total[["percent.mt"]] <- PercentageFeatureSet(islets.total, pattern = "^MT-")
+VlnPlot(islets.total, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+
+#view row and cell number
+dim(islets.total)
+
+
+islets.total <- subset(islets.total, subset = nFeature_RNA > 200 & percent.mt < 25)
+
+dim(islets.total)
+
+## QC islet sorted
+
+islets.sorted[["percent.mt"]] <- PercentageFeatureSet(islets.sorted, pattern = "^MT-")
+VlnPlot(islets.sorted, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+
+#view row and cell number
+dim(islets.sorted)
+
+
+islets.sorted <- subset(islets.sorted, subset = nFeature_RNA > 200 & percent.mt < 10)
+
+dim(islets.sorted)
+
+# Load in merged spleen and islets
+
+load(file= "Merged.Spleen.Islets.Immune.rds")
+
+# label 
+cluster_ids <- c("CD8 T cell/NK cell", "CD4 T cell", "B cell", "CD8 T cell", "B cell", "Mast Cell", "Macrophage", "Macrophage", 
+                 "NK Cell", "CD8 T cell", "Macrophage", "CD4 T cell",  "Macrophage", "Plasma cell", "NK/ILCs")
+names(cluster_ids) <- levels(spleen.islets)
+spleen.islets.labels <- RenameIdents(spleen.islets, cluster_ids)
+rm(cluster_ids)
+DimPlot(spleen.islets.labels, reduction = "umap", label=FALSE, repel=TRUE) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())
+DimPlot(spleen.islets.labels, reduction = "umap", label=TRUE, repel=TRUE) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+
+#Celltype
+spleen.islets.labels$Celltype <- "Placeholder"
+spleen.islets.labels$Celltype <- (ifelse(spleen.islets.labels$seurat_clusters == "0", "CD8 T cell/NK cell", spleen.islets.labels$Celltype))
+spleen.islets.labels$Celltype <- (ifelse(spleen.islets.labels$seurat_clusters == "1", "CD4 T cell", spleen.islets.labels$Celltype))
+spleen.islets.labels$Celltype <- (ifelse(spleen.islets.labels$seurat_clusters == "2", "B cell", spleen.islets.labels$Celltype))
+spleen.islets.labels$Celltype <- (ifelse(spleen.islets.labels$seurat_clusters == "3", "CD8 T cell", spleen.islets.labels$Celltype))
+spleen.islets.labels$Celltype <- (ifelse(spleen.islets.labels$seurat_clusters == "4", "B cell", spleen.islets.labels$Celltype))
+spleen.islets.labels$Celltype <- (ifelse(spleen.islets.labels$seurat_clusters == "5", "Mast cell", spleen.islets.labels$Celltype))
+spleen.islets.labels$Celltype <- (ifelse(spleen.islets.labels$seurat_clusters == "6", "Macrophage", spleen.islets.labels$Celltype))
+spleen.islets.labels$Celltype <- (ifelse(spleen.islets.labels$seurat_clusters == "7", "Macrophage", spleen.islets.labels$Celltype))
+spleen.islets.labels$Celltype <- (ifelse(spleen.islets.labels$seurat_clusters == "8", "NK cell", spleen.islets.labels$Celltype))
+spleen.islets.labels$Celltype <- (ifelse(spleen.islets.labels$seurat_clusters == "9", "CD8 T cell", spleen.islets.labels$Celltype))
+spleen.islets.labels$Celltype <- (ifelse(spleen.islets.labels$seurat_clusters == "10", "Macrophage", spleen.islets.labels$Celltype))
+spleen.islets.labels$Celltype <- (ifelse(spleen.islets.labels$seurat_clusters == "11", "CD4 T cell", spleen.islets.labels$Celltype))
+spleen.islets.labels$Celltype <- (ifelse(spleen.islets.labels$seurat_clusters == "12", "Macrophage", spleen.islets.labels$Celltype))
+spleen.islets.labels$Celltype <- (ifelse(spleen.islets.labels$seurat_clusters == "13", "Plasma cell", spleen.islets.labels$Celltype))
+spleen.islets.labels$Celltype <- (ifelse(spleen.islets.labels$seurat_clusters == "14", "NK cell/ILCs", spleen.islets.labels$Celltype))
+
+DimPlot(spleen.islets.labels, group.by="Celltype", reduction = "umap", label=TRUE, repel=TRUE) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+# Data visualization
+
+DotPlot(spleen.islets.labels, group.by="Celltype", col.min = 0.25, dot.scale = 4, 
+        features = c("CD4", "CD4-TotalSeqC", "CD8A", "CD8a-TotalSeqC", "IL7R", "CD127-TotalSeqC")
+        , cols = c("lightgrey", "#0B0B45")) + RotatedAxis()
+
+ggplot(spleen.islets.labels@meta.data, aes(x=seurat_clusters, fill=Celltype)) + geom_bar(position="fill")  + theme_minimal()
+
+ggplot(spleen.islets.labels@meta.data, aes(x=Celltype, fill=dataorigin)) + geom_bar(position="fill")  + theme_minimal()
+
+
+
+### find your favorite way to visualize the data
+
+
+# Visualize protein and RNA 
+RidgePlot(spleen.islets.labels, features = "CD117-TotalSeqC", ncol=2)
+FeaturePlot(spleen.islets, features = "KIT", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD117-TotalSeqC", min.cutoff = 4, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD117-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+RidgePlot(spleen.islets.labels, features = "CD11b-TotalSeqC", ncol=2)
+FeaturePlot(spleen.islets, features = "ITGAM", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD11b-TotalSeqC", min.cutoff = 0, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD11b-TotalSeqC", min.cutoff = 3, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+RidgePlot(spleen.islets.labels, features = "CD80-TotalSeqC", ncol=2)
+FeaturePlot(spleen.islets, features = "CD80", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD80-TotalSeqC", order=TRUE, min.cutoff = 2, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+RidgePlot(spleen.islets.labels, features = "PDL1-TotalSeqC", ncol=2)
+FeaturePlot(spleen.islets, features = "CD274", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "PDL1-TotalSeqC",  min.cutoff = 1, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+RidgePlot(spleen.islets.labels, features = "CD137L-TotalSeqC", ncol=2)
+FeaturePlot(spleen.islets, features = "TNFSF9", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD137L-TotalSeqC", min.cutoff = 1, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+RidgePlot(spleen.islets.labels, features = "CD40-TotalSeqC", ncol=2)
+FeaturePlot(spleen.islets, features = "CD40", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD40-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+RidgePlot(spleen.islets.labels, features = "CD45-TotalSeqC", ncol=2)
+FeaturePlot(spleen.islets, features = "PTPRC", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD45-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+RidgePlot(spleen.islets.labels, features = "CD56-TotalSeqC", ncol=2)
+FeaturePlot(spleen.islets, features = "NCAM1", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD56-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD56-TotalSeqC", order=TRUE, min.cutoff= 0.5, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+RidgePlot(spleen.islets.labels, features = "CD138-TotalSeqC", ncol=2)
+FeaturePlot(spleen.islets, features = "SDC1", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD138-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD138-TotalSeqC", order=TRUE, min.cutoff=3.5, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+RidgePlot(spleen.islets.labels, features = "CCR4-TotalSeqC", ncol=2)
+FeaturePlot(spleen.islets, features = "CCR4", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CCR4-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+RidgePlot(spleen.islets.labels, features = "CD14-TotalSeqC", ncol=2)
+FeaturePlot(spleen.islets, features = "CD14", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD14-TotalSeqC", min.cutoff=0.5, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+RidgePlot(spleen.islets.labels, features = "CD16-TotalSeqC", ncol=2)
+FeaturePlot(spleen.islets, features = "FCGR3A", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD16-TotalSeqC", min.cutoff=1.5, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+RidgePlot(spleen.islets.labels, features = "CD25-TotalSeqC", ncol=2)
+FeaturePlot(spleen.islets, features = "IL2RA", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD25-TotalSeqC", min.cutoff=1.5, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+RidgePlot(spleen.islets.labels, features = "TIGIT-TotalSeqC", ncol=2)
+FeaturePlot(spleen.islets, features = "TIGIT", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "TIGIT-TotalSeqC", min.cutoff= 1, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+RidgePlot(spleen.islets.labels, features = "CD161-TotalSeqC", ncol=2)
+FeaturePlot(spleen.islets, features = "KLRB1", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD161-TotalSeqC", order=TRUE, cols = c("light grey", "#3a9dff")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD161-TotalSeqC", min.cutoff= 1.5, order=TRUE, cols = c("light grey", "#3a9dff")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "NCR1", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "NKp46-TotalSeqC", min.cutoff =1, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "PTGDR2", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CRTh2-TotalSeqC", min.cutoff = 2, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "IL7R", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD127-TotalSeqC", min.cutoff = 0.5, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+RidgePlot(spleen.islets.labels, features = "CD127-TotalSeqC", ncol=2)
+
+FeaturePlot(spleen.islets, features = "CCR6", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CCR6-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "KLRK1", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "NKG2D-TotalSeqC", min.cutoff =3, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+RidgePlot(spleen.islets.labels, features = "NKG2D-TotalSeqC", ncol=2)
+
+FeaturePlot(spleen.islets, features = "NCR2", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "NKp44-TotalSeqC", min.cutoff=3, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "NKp44-TotalSeqC", min.cutoff=4, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "NCR2", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank()) 
+FeaturePlot(spleen.islets, features = "NKp44-TotalSeqC", min.cutoff=3, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank()) 
+FeaturePlot(spleen.islets, features = "NKp44-TotalSeqC", min.cutoff=4, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank()) 
+
+FeaturePlot(spleen.islets, features = "KLRD1", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD94-TotalSeqC", min.cutoff =1, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+RidgePlot(spleen.islets.labels, features = "CD94-TotalSeqC", ncol=2)
+
+FeaturePlot(spleen.islets, features = "PTGDR2", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CRTh2-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "KLRG1", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "KLRG1-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "CXCR3", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CXCR3-TotalSeqC", min.cutoff = 1, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "TRGC1", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "TCRgd-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "TCRgd-TotalSeqC", min.cutoff=3.5, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "TRGC1", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())
+FeaturePlot(spleen.islets, features = "TCRgd-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank()) 
+FeaturePlot(spleen.islets, features = "TCRgd-TotalSeqC", min.cutoff=3.5, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank()) 
+
+#FeaturePlot(spleen.islets, features = "TRGC1", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "TCRiNKT-TotalSeqC", min.cutoff = 3, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "TRBC2", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "TRBC1", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "TRAC", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "TCRab-TotalSeqC", min.cutoff = 0, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "CD8A", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD8a-TotalSeqC", min.cutoff = 2, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+RidgePlot(spleen.islets.labels, features = "CD8a-TotalSeqC", ncol=2)
+
+FeaturePlot(spleen.islets, features = "CD4", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD4-TotalSeqC", min.cutoff= 2, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+RidgePlot(spleen.islets.labels, features = "CD4-TotalSeqC", ncol=2)
+
+FeaturePlot(spleen.islets, features = "CD3E", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD3-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+RidgePlot(spleen.islets.labels, features = "CD3-TotalSeqC", ncol=2)
+
+FeaturePlot(spleen.islets, features = "TRAC", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "TCRab-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "MRC1", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD206-TotalSeqC", min.cutoff=1, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "TRAC", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "TCRab-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "HLA-DRB1", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "HLA-DRA", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "HLADR-TotalSeqC", min.cutoff =4, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+RidgePlot(spleen.islets.labels, features = "HLADR-TotalSeqC", ncol=2)
+
+FeaturePlot(spleen.islets, features = "PTPRC", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD45-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD45RA-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD45RO-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "LAG3", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "LAG3-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "CX3CR1", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CX3CR1-TotalSeqC", min.cutoff=1, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "CXCR3", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CXCR3-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "CRLF2", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "TSLPR-TotalSeqC", min.cutoff=2, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "ITGA2", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD49b-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "CD38", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD38-TotalSeqC", min.cutoff=2, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "B3GAT1", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD57-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "ITGA1", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD49a-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "TNFRSF18", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "GITR-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "TNFRSF18", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "GITR-TotalSeqC", min.cutoff=1, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "ENTPD1", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD39-TotalSeqC", min.cutoff=1, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "CD69", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD69-TotalSeqC", min.cutoff=2, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "PDCD1", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "PD1-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "CTLA4", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CTLA4-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "LAMP1", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "LAMP1-TotalSeqC", min.cutoff=1, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "FAS", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "Fas-TotalSeqC", min.cutoff=1, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "TNFRSF4", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "OX40-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "OX40-TotalSeqC", min.cutoff=1, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "TNFRSF4", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank()) 
+FeaturePlot(spleen.islets, features = "OX40-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank()) 
+FeaturePlot(spleen.islets, features = "OX40-TotalSeqC", min.cutoff=1, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank()) 
+
+FeaturePlot(spleen.islets, features = "TNFSF9", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD137L-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD137L-TotalSeqC", min.cutoff=2, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "TNFSF9", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank()) 
+FeaturePlot(spleen.islets, features = "CD137L-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD137L-TotalSeqC", min.cutoff=2, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank()) 
+
+FeaturePlot(spleen.islets, features = "CD27", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD27-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "CD28", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD28-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "FCGR1A", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD64-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD64-TotalSeqC", min.cutoff=2, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "FCGR1A", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank()) 
+FeaturePlot(spleen.islets, features = "CD64-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank()) 
+FeaturePlot(spleen.islets, features = "CD64-TotalSeqC", min.cutoff=2, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank()) 
+
+FeaturePlot(spleen.islets, features = "LRRC32", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "GARP-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "FOXP3", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "IL2RB", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "IL2RB-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "CXCR4", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CXCR4-TotalSeqC", min.cutoff=3, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "ITGA4", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD49d-TotalSeqC", min.cutoff=2, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "TNFRSF1B", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD120b-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "FCGR2A", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD32-TotalSeqC", min.cutoff=3, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "FCGR1A", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD64-TotalSeqC", order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "CD86", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD86-TotalSeqC", order=TRUE, min.cutoff=2, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "CD163", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CD163-TotalSeqC", min.cutoff=2, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+FeaturePlot(spleen.islets, features = "CCR7", order=TRUE, cols = c("light grey", "#44a946")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+FeaturePlot(spleen.islets, features = "CCR7-TotalSeqC", min.cutoff=3, order=TRUE, cols = c("light grey", "#3A9DFF")) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())  
+
+
+## Look at protein only clustering and RNA only clustering
+
+#generate list of Totalseq Abs
+TotalSeqC_list <- grep("-TotalSeqC$", rownames(spleen.islets), value=TRUE)
+TotalSeqC_list
+dim(spleen.islets)
+
+# generate protein only object
+ADTonly <- subset(spleen.islets, features = TotalSeqC_list)
+dim(ADTonly)
+
+# generate RNA only object
+noTotalSeqC_list <- grep("-TotalSeqC$", rownames(spleen.islets), value=TRUE, invert = TRUE)
+noADT <- subset(spleen.islets, features = noTotalSeqC_list)
+dim(noADT)
+
+#Normalize ADT only
+ADTonly <- SCTransform(ADTonly)
+ADTonly <- RunPCA(object = ADTonly)
+ADTonly <- RunUMAP(ADTonly, reduction = "harmony", dims = 1:30)
+ADTonly <- FindNeighbors(ADTonly, reduction = "harmony", dims = 1:30)
+ADTonly <- FindClusters(ADTonly, resolution = 0.75)
+DimPlot(ADTonly, reduction = "umap", label=TRUE, repel=TRUE) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())
+DimPlot(ADTonly, reduction = "umap", label=TRUE, repel=TRUE, group.by="dataorigin")
+
+ADTonly.cluster.0.markers <- FindMarkers(ADTonly, ident.1 = 0, min.pct = 0.25)
+ADTonly.cluster.1.markers <- FindMarkers(ADTonly, ident.1 = 1, min.pct = 0.25)
+ADTonly.cluster.2.markers <- FindMarkers(ADTonly, ident.1 = 2, min.pct = 0.25)
+ADTonly.cluster.3.markers <- FindMarkers(ADTonly, ident.1 = 3, min.pct = 0.25)
+ADTonly.cluster.4.markers <- FindMarkers(ADTonly, ident.1 = 4, min.pct = 0.25)
+ADTonly.cluster.5.markers <- FindMarkers(ADTonly, ident.1 = 5, min.pct = 0.25)
+ADTonly.cluster.6.markers <- FindMarkers(ADTonly, ident.1 = 6, min.pct = 0.25)
+ADTonly.cluster.7.markers <- FindMarkers(ADTonly, ident.1 = 7, min.pct = 0.25)
+ADTonly.cluster.8.markers <- FindMarkers(ADTonly, ident.1 = 8, min.pct = 0.25)
+ADTonly.cluster.9.markers <- FindMarkers(ADTonly, ident.1 = 9, min.pct = 0.25)
+ADTonly.cluster.10.markers <- FindMarkers(ADTonly, ident.1 = 10, min.pct = 0.25)
+ADTonly.cluster.11.markers <- FindMarkers(ADTonly, ident.1 = 11, min.pct = 0.25)
+ADTonly.cluster.12.markers <- FindMarkers(ADTonly, ident.1 = 12, min.pct = 0.25)
+ADTonly.cluster.13.markers <- FindMarkers(ADTonly, ident.1 = 13, min.pct = 0.25)
+ADTonly.cluster.14.markers <- FindMarkers(ADTonly, ident.1 = 14, min.pct = 0.25)
+
+save(ADTonly, file="ADTonly.rds")
+
+#cells labels
+
+cluster_ids <- c("CD8 T cell","CD4 T cell", "Unclear", "CD8 T cell", "Unclear", "Unclear", "Macrophage", "Macrophage", "NK cell", "CD8 T cell", "Macrophage", "Unclear", "Macrophage", "Plasma cell",  "NK cell")
+names(cluster_ids) <- levels(ADTonly)
+ADTonly.labels <- RenameIdents(ADTonly, cluster_ids)
+rm(cluster_ids)
+DimPlot(ADTonly.labels, reduction = "umap", label=TRUE, repel=TRUE) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), 
+                                                                              axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())+ NoLegend()
+DimPlot(ADTonly.labels, reduction = "umap", group.by="dataorigin", label=TRUE, repel=TRUE) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), 
+                                                                             axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())+ NoLegend()
+
+
+
+#HEATMAP WITH ADT ONLY MARKERS 
+DoHeatmap(object = ADTonly.labels,
+          features = c("CD103-TotalSeqC", "ITGB7-TotalSeqC", 
+                       "CD49a-TotalSeqC","CD8a-TotalSeqC","PD1-TotalSeqC",
+                       "CD45-TotalSeqC","CD127-TotalSeqC","ICOS-TotalSeqC", 
+                       "CD94-TotalSeqC", "NKG2D-TotalSeqC", "CD3-TotalSeqC",
+                       "CD4-TotalSeqC", "CD28-TotalSeqC", "CD45RO-TotalSeqC",
+                       "Fas-TotalSeqC", "CD57-TotalSeqC", "CCR4-TotalSeqC", "CXCR4-TotalSeqC",
+                       "CD161-TotalSeqC", "CD40-TotalSeqC", "CD45RA-TotalSeqC", "CD27-TotalSeqC",
+                       "CD73-TotalSeqC", "HLADR-TotalSeqC", "CXCR3-TotalSeqC", "CX3CR1-TotalSeqC",
+                       "CD86-TotalSeqC", "CD25-TotalSeqC", "CD39-TotalSeqC", "CD69-TotalSeqC",
+                       "PDL1-TotalSeqC","LAG3-TotalSeqC","CD32-TotalSeqC","CD137-TotalSeqC",
+                       "NKp46-TotalSeqC","CD117-TotalSeqC","TIM3-TotalSeqC","KLRG1-TotalSeqC",
+                       "CD80-TotalSeqC", "CD120b-TotalSeqC","TSLPR-TotalSeqC","OX40-TotalSeqC",
+                       "CD206-TotalSeqC","CD64-TotalSeqC","GITR-TotalSeqC","CD163-TotalSeqC",
+                       "CD137L-TotalSeqC","CRTh2-TotalSeqC","CD11b-TotalSeqC","CD56-TotalSeqC",
+                       "IL2RB-TotalSeqC","CD127-TotalSeqC","CD16-TotalSeqC","CD38-TotalSeqC"),
+          size = 3, 
+          disp.max = NULL, disp.min = -1.5)+ 
+  scale_fill_gradient2( low = rev(c('#d1e5f0','#67a9cf','#2166ac')), 
+                        mid = "white", high = rev(c('#FF7518','#FFA500','#FFD580')), 
+                        midpoint = 0, guide = "colourbar", aesthetics = "fill")
+
+
+
+#Normalize RNA only
+RNAonly <- SCTransform(noADT, vars.to.regress="percent.mt")
+RNAonly <- RunPCA(object = RNAonly)
+RNAonly <- RunUMAP(RNAonly, reduction = "harmony", dims = 1:30)
+RNAonly <- FindNeighbors(RNAonly, reduction = "harmony", dims = 1:30)
+RNAonly <- FindClusters(RNAonly, resolution = 0.75)
+DimPlot(RNAonly, reduction = "umap", label=TRUE, repel=TRUE) + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), axis.ticks = element_blank(), axis.text = element_blank(), plot.title = element_blank())
+DimPlot(RNAonly, reduction = "umap", label=FALSE, repel=TRUE, group.by="dataorigin")
+
+
+RNAonly.cluster.0.markers <- FindMarkers(RNAonly, ident.1 = 0, min.pct = 0.25)
+RNAonly.cluster.1.markers <- FindMarkers(RNAonly, ident.1 = 1, min.pct = 0.25)
+RNAonly.cluster.2.markers <- FindMarkers(RNAonly, ident.1 = 2, min.pct = 0.25)
+RNAonly.cluster.3.markers <- FindMarkers(RNAonly, ident.1 = 3, min.pct = 0.25)
+RNAonly.cluster.4.markers <- FindMarkers(RNAonly, ident.1 = 4, min.pct = 0.25)
+RNAonly.cluster.5.markers <- FindMarkers(RNAonly, ident.1 = 5, min.pct = 0.25)
+RNAonly.cluster.6.markers <- FindMarkers(RNAonly, ident.1 = 6, min.pct = 0.25)
+RNAonly.cluster.7.markers <- FindMarkers(RNAonly, ident.1 = 7, min.pct = 0.25)
+RNAonly.cluster.8.markers <- FindMarkers(RNAonly, ident.1 = 8, min.pct = 0.25)
+RNAonly.cluster.9.markers <- FindMarkers(RNAonly, ident.1 = 9, min.pct = 0.25)
+RNAonly.cluster.10.markers <- FindMarkers(RNAonly, ident.1 = 10, min.pct = 0.25)
+RNAonly.cluster.11.markers <- FindMarkers(RNAonly, ident.1 = 11, min.pct = 0.25)
+RNAonly.cluster.12.markers <- FindMarkers(RNAonly, ident.1 = 12, min.pct = 0.25)
+RNAonly.cluster.13.markers <- FindMarkers(RNAonly, ident.1 = 13, min.pct = 0.25)
+RNAonly.cluster.14.markers <- FindMarkers(RNAonly, ident.1 = 14, min.pct = 0.25)
+
+save(RNAonly, file="RNAonly.rds")
+
+
+#cell labels 
+
+cluster_ids <- c("CD8 T cell","T cell", "B cell", "CD8 T/NK cell", "B cell", "Mast Cell", "Macrophage", "Macrophage", "NK cell/ILC", "Unclear", "Macrophage", "Unclear", "Macrophage", "Plasma cell",  "NK cell")
+names(cluster_ids) <- levels(RNAonly)
+RNAonly.labels <- RenameIdents(RNAonly, cluster_ids)
+rm(cluster_ids)
+DimPlot(RNAonly.labels, reduction = "umap", label=FALSE, repel=TRUE)  + theme (axis.title = element_blank(),  panel.border = element_rect(colour ="black", size=0.25), 
+                                                                               
+                                                                               #Heatmap with RNA only markers 
+                                                                               DoHeatmap(object = RNAonly.labels,
+                                                                                         features = c("CCL5","IFIT2","TNFAIP3","H1FX",
+                                                                                                      "OASL","IL7R","IL32","CD3E","FOS","EGR1","CXCR4","KLRB1","CD3D",
+                                                                                                      "JUNB","CD79A","LTB","CD74","CD19","HLA-DQA1","CD22","GZMK","GZMA",
+                                                                                                      "NKG7","CD8A","KLRD1","IER2","CD37","CD52", 
+                                                                                                      "CD79B","HLA-DRA","IGHD","FCER2","TPSB2","TPSAB1","VIM","GATA2",
+                                                                                                      "TPSD1","AREG","S100A8","CST3","LYZ","FTL","LST1","FCN1",
+                                                                                                      "FCER1G","IL1B","CCL3","CXCL8","SOD2","CCL4","APOE","CCL4L2","C1QA",
+                                                                                                      "CCL3L1","GPR183","HLA-DRB1","SPP1",
+                                                                                                      "HLA-DPB1","CD83","XCL1","CD7","XCL2","IL2RB","CD69","DUSP1","JUN","KLRF1",
+                                                                                                      "KLRC1","C1QB","CD5L",
+                                                                                                      "CD68","GLUL","FCGRT","NEAT1","KLF6","IGKV4-1","IGKC","IGHG1","IGHA1",
+                                                                                                      "JCHAIN","IGHG3","GNLY","PRF1","GZMB","PTGDS","FGFBP2","SPON2","CD247","FCGR3A"),
+                                                                                         size = 3, 
+                                                                                         disp.max = NULL, disp.min = -1.5)+ 
+                                                                                 scale_fill_gradient2( low = rev(c('#d1e5f0','#67a9cf','#2166ac')), 
+                                                                                                       mid = "white", high = rev(c('#FF7518','#FFA500','#FFD580')), 
+                                                                                                       midpoint = 0, guide = "colourbar", aesthetics = "fill")
+
